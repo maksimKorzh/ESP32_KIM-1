@@ -1476,81 +1476,6 @@ const uint8_t TINY_BASIC[] = {
     0xbc, 0x09, 0x95, 0x2f, 0x09, 0x04, 0x2f, 0x00, 0x00, 0x00
 };
 
-/*
-    MOVIT from the 1st book of KIM ()
-
-    ORIGIN at $4000
-    START at $4000
-
-*/
- 
-const uint8_t MOVIT[] = {
-  0xd8, 0xa0, 0xff, 0x38, 0xa5, 0xd2, 0xe5, 0xd0, 0x85, 0xd8, 0xa5, 0xd3,
-  0xe5, 0xd1, 0x85, 0xd9, 0x18, 0xa5, 0xd8, 0x65, 0xd4, 0x85, 0xd6, 0xa5,
-  0xd9, 0x65, 0xd5, 0x85, 0xd7, 0xe6, 0xd8, 0xe6, 0xd9, 0x38, 0xa5, 0xd4,
-  0xe5, 0xd0, 0xa5, 0xd5, 0xe5, 0xd1, 0xa2, 0x00, 0x90, 0x02, 0xa2, 0x02,
-  0xa1, 0xd0, 0x81, 0xd4, 0x90, 0x14, 0xc6, 0xd2, 0x98, 0x45, 0xd2, 0xd0,
-  0x02, 0xc6, 0xd3, 0xc6, 0xd6, 0x98, 0x45, 0xd6, 0xd0, 0x02, 0xc6, 0xd7,
-  0xb0, 0x0c, 0xe6, 0xd0, 0xd0, 0x02, 0xe6, 0xd1, 0xe6, 0xd4, 0xd0, 0x02,
-  0xe6, 0xd5, 0xc6, 0xd8, 0xd0, 0x02, 0xc6, 0xd9, 0xd0, 0xcc, 0x00
-};
-
-/*
-   Save data from RAM (0x0000-0x16FF) to EEPROM (0x2900-0x29AFF)
-
-   ORIGIN at $4060
-   START at $4060
-*/
-
-const uint8_t SAVE_RAM[] = {
-  0xEA, 0xEA,
-  0xEA, 0xEA, 0xEA,
-  0xEA, 0xEA,
-  0xEA, 0xEA, 0xEA,
-  0xA9, 0x00,          // LDA #$00
-  0x8D, 0xD0, 0x00,    // STA $00D0
-  0xA9, 0x03,          // LDA #$03
-  0x8D, 0xD1, 0x00,    // STA $00D1
-  0xA9, 0xFF,          // LDA #$FF
-  0x8D, 0xD2, 0x00,    // STA $00D2
-  0xA9, 0x12,          // LDA #$12
-  0x8D, 0xD3, 0x00,    // STA $00D3
-  0xA9, 0x00,          // LDA $00
-  0x8D, 0xD4, 0x00,    // STA $00D4
-  0xA9, 0x29,          // LDA 0x29
-  0x8D, 0xD5, 0x00,    // STA $00D5
-  0x20, 0x00, 0x40     // JSR MOVIT
-};
-
-/*
-   Load data from EEPROM (0x2900-0x29AFF) to RAM (0x0200-0x03FF)
-
-   ORIGIN at $408B
-   START at $408B
-*/
-
-const uint8_t LOAD_RAM[] = {
-  // copy program to RAM
-  0xEA, 0xEA, 0xEA,    // LDA $2900
-  0xEA, 0xEA,          // STA $24   BASIC code len
-  0xEA, 0xEA, 0xEA,    // LDA $2901
-  0xEA, 0xEA,          // STA $25   BASIC code len
-  0xA9, 0x00,          // LDA #$00
-  0x8D, 0xD0, 0x00,    // STA $00D0
-  0xA9, 0x29,          // LDA #$29
-  0x8D, 0xD1, 0x00,    // STA $00D1
-  0xA9, 0xFF,          // LDA #$FF
-  0x8D, 0xD2, 0x00,    // STA $00D2
-  0xA9, 0x38,          // LDA #$38
-  0x8D, 0xD3, 0x00,    // STA $00D3
-  0xA9, 0x00,          // LDA $00
-  0x8D, 0xD4, 0x00,    // STA $00D4
-  0xA9, 0x03,          // LDA 0x02
-  0x8D, 0xD5, 0x00,    // STA $00D5
-  0x20, 0x00, 0x40     // JSR MOVIT
-};
-
-
 // Interrupt requests (instead of filling memory from 1FFF to FFFA with 0xFF)
 const uint8_t IRQ[] = {
 /* FFFA */                     //  ;       ** INTERRUPT VECTORS **
@@ -2513,6 +2438,49 @@ void xprintf(const char * format, ...)
   } va_end(ap);
 }
 
+char read_keyboard() {
+  // read from serial if available
+  char c = Serial.read();
+  
+  // read from keyboard otherwise
+  if (c == 0xFF) {
+      auto keyboard = PS2Controller.keyboard();
+      if (keyboard->virtualKeyAvailable()) {
+          VirtualKeyItem item;
+          if (keyboard->getNextVirtualKey(&item)) {              
+              //Serial.print(item.scancode[0]); Serial.print("\n\r");
+              switch (item.scancode[0]) {
+                  case 118: nmi6502(); return 0x0D;                                // ESC
+                  case 131: break;                      // F8
+                  case 1: xprintf("\n\r\e[37m WHITE COLOR ENABLED\n\r"); break;    // F9
+                  case 9: xprintf("\n\r\e[92m GREEN COLOR ENABLED\n\r"); break;    // F10
+                  case 120: xprintf("\n\r\e[93m YELLOW COLOR ENABLED\n\r"); break; // F11
+                  case 7: xprintf("\n\r\e[96m BLUE COLOR ENABLED\n\r"); break;     // F12
+                  default: return item.down ? item.ASCII : 0x00;
+              }
+              
+              /*
+                  scan codes:
+                  
+                  ESC    118
+                  F1     5
+                  F2     6
+                  F3     4
+                  F4     12
+                  F5     3
+                  F6     11
+                  F7     131
+                  F8     10
+                  F9     1
+                  F10    9
+                  F11    120
+                  F12    7
+              */
+          }
+      } return 0x00;
+  } else return c;
+}
+
 void setup()
 {
     // init serial port
@@ -2525,7 +2493,10 @@ void setup()
     DisplayController.setResolution(VGA_640x480_60Hz);
     Terminal.begin(&DisplayController);
     Terminal.enableCursor(true);
-
+    
+    // pre-load tiny bassic to RAM
+    for (int i = 0x2000; i <= 0x28FF; i++) RAM_EXP[i - 0x2000] = TINY_BASIC[i - 0x2000]; 
+    
     // reset CPU
     reset6502();
     
@@ -2533,28 +2504,7 @@ void setup()
     write6502(0x17FA, 0x00);
     write6502(0x17FB, 0x1C);
     write6502(0x17FE, 0x00);
-    write6502(0x17FF, 0x1C);
-    
-    // Zero page LOAD & SAVE addresses to use in BASIC
-    RAM[0x98] = 0x8B;
-    RAM[0x99] = 0x40;
-    RAM[0xA6] = 0x60;
-    RAM[0xA7] = 0x40;
-}
-
-char read_keyboard() {
-  // read from serial if available
-  char c = Serial.read();
-  
-  // read from keyboard otherwise
-  if (c == 0xFF) {
-      auto keyboard = PS2Controller.keyboard();
-      if (keyboard->virtualKeyAvailable()) {
-          VirtualKeyItem item;
-          if (keyboard->getNextVirtualKey(&item))
-              return item.down ? item.ASCII : 0x00;
-      } return 0x00;
-  } else return c;
+    write6502(0x17FF, 0x1C);    
 }
 
 void loop() { step6502(); }
