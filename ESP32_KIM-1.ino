@@ -1561,10 +1561,13 @@ const uint8_t IRQ[] = {
 };
 
 // ======== RAM  0x0000-0x1700 ================================================
-uint8_t RAM[0x1700]; // 5888 bytes
+uint8_t RAM[0x1700];    // 5888 bytes
 
 // ======== RIOT chips memory 0x1700-0x17FF====================================
-uint8_t RIOT[256];
+uint8_t RIOT[0x100];    // 256 bytes
+
+// ======== RAM EXPANSION  0x0000-0x1700 ================================================
+uint8_t RAM_EXP[0x7548];    // 30024 bytes
 
 /**********************************************\
  ==============================================
@@ -2399,21 +2402,9 @@ uint8_t read6502(uint16_t address) {
 
     // SUPERMON ROM
     if (address >= 0x9548 && address <= 0xA032) return SUPERMON[address - 0x9548];
-    
-    // LOAD 512 bytes
-    //if (address >= 0x408B && address <= 0x40B5) return pgm_read_byte_near(LOAD_RAM + (address - 0x408B));
-    
-    // SAVE 512 bytes
-    //if (address >= 0x4060 && address <= 0x408A) return pgm_read_byte_near(SAVE_RAM + (address - 0x4060));
-    
-    // MOVIT
-    //if (address >= 0x4000 && address <= 0x405F) MOVIT[address - 0x4000];
-    
-    // EEPROM (1024 for Uno/Nano, 4096 for Mega)
-    //if (address >= 0x2900 && address <= 0x3FFF) return (EEPROM.read(address - 0x2900));
 
-    // TINY BASIC ROM    
-    if (address >= 0x2000 && address <= 0x28FF) return TINY_BASIC[address - 0x2000];
+    // RAM Expansion
+    if (address >= 0x2000 && address <= 0x9547) return RAM_EXP[address - 0x2000];
     
     // KIM-1 ROM (HEX monitor)
     if (address >= 0x1800 && address <= 0x1FFF) {  // thanks to Oscar Vermeulen for the below intercepts
@@ -2472,15 +2463,6 @@ uint8_t read6502(uint16_t address) {
                 return 0xff;
             } else return 0x80;
         }
-      
-        /* read timers
-        if ((addr >= 0x1704) && (addr <= 0x1707)) {
-          if (single_step == 1) {
-              if (addr == 0x1707) return(0x80);  // always bailout in SST mode
-              else return timer.read(addr);
-          } return timer.read(addr);
-        }*/
-        
         // read 6530s RIOT chips
         return RIOT[address - 0x1700];
     }
@@ -2493,22 +2475,16 @@ uint8_t read6502(uint16_t address) {
 }
 
 void write6502(uint16_t address, uint8_t value) {    
-    // EEPROM (512 bytes for NANO, 1024 forUNO, 4096 for MEGA)
-    /*if (address >= 0x2900 && address <= 0x3FFF) {
-        EEPROM.update((address - 0x2900), value);
-        return;
-    }*/
-
+    // RAM expansion
+    if (address >= 0x2000 && address <= 0x9547) {
+      RAM_EXP[address - 0x2000] = value;
+      return;
+    }
+    
     // KIM-1 6530 RIOT chips
-    if (address >= 0x1700 && address <= 0x17FF) {
-      /*if ((address >= 0x1704) && (address <= 0x1707)) {   // set timer
-          timer.write(addr, value);
-          return;
-      }*/
-      
+    if (address >= 0x1700 && address <= 0x17FF) {      
       // 6530s RIOT chips
       RIOT[address - 0x1700] = value;
-      //if (address == 0x1740) driveLED();
       return;
     }
     
@@ -2549,9 +2525,6 @@ void setup()
     DisplayController.setResolution(VGA_640x480_60Hz);
     Terminal.begin(&DisplayController);
     Terminal.enableCursor(true);
-    
-    // green text
-    xprintf("\e[92m");
 
     // reset CPU
     reset6502();
