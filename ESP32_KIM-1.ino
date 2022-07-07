@@ -25,6 +25,7 @@
 
 
 #include "fabgl.h"
+#include "SPIFFS.h"
 
 /**********************************************\
  ==============================================
@@ -39,6 +40,24 @@ uint8_t serial_mode = 1;
 fabgl::VGA16Controller   DisplayController;
 fabgl::Terminal          Terminal;
 fabgl::PS2Controller     PS2Controller;
+
+const char *help = "\r\n\n\
+    Commands:                        Programs:\r\n\n\
+\
+    F1  - print this help            $9548 - Supermon+ 64 by Jim Butterfield\r\n\
+    F2  - save session via SPIFFS    $2000 - Tiny BASIC by Tom Pittman ($2003)\r\n\
+    F3  - load session via SPIFFS\r\n\
+    F4  - reboot\r\n\
+    F9  - text color WHITE\r\n\
+    F10 - text color GREEN\r\n\
+    F11 - text color YELLOW\r\n\
+    F12 - text color CYAN\r\n\
+";
+
+/* You only need to format SPIFFS the first time you run a
+   test or else use the SPIFFS plugin to create a partition
+   https://github.com/me−no−dev/arduino−esp32fs−plugin */
+#define FORMAT_SPIFFS_IF_FAILED false
 
 /**********************************************\
  ==============================================
@@ -2451,14 +2470,18 @@ char read_keyboard() {
               //Serial.print(item.scancode[0]); Serial.print("\n\r");
               switch (item.scancode[0]) {
                   case 118: nmi6502(); return 0x0D;                                // ESC
-                  case 131: break;                      // F8
+                  case 5: xprintf("%s", help); break;                              // F1 Help commands
+                  case 6: write_file(SPIFFS, "/session.txt"); break;               // F2 write file
+                  case 4: read_file(SPIFFS, "/session.txt"); break;                // F3 read file
+                  case 12: ESP.restart(); // F4 rebbot
+                  case 10: xprintf("\e[2J\e[H"); break;                            // F8 clear screen
                   case 1: xprintf("\n\r\e[37m WHITE COLOR ENABLED\n\r"); break;    // F9
                   case 9: xprintf("\n\r\e[92m GREEN COLOR ENABLED\n\r"); break;    // F10
                   case 120: xprintf("\n\r\e[93m YELLOW COLOR ENABLED\n\r"); break; // F11
-                  case 7: xprintf("\n\r\e[96m BLUE COLOR ENABLED\n\r"); break;     // F12
+                  case 7: xprintf("\n\r\e[96m CYAN COLOR ENABLED\n\r"); break;     // F12
                   default: return item.down ? item.ASCII : 0x00;
               }
-              
+
               /*
                   scan codes:
                   
@@ -2481,6 +2504,36 @@ char read_keyboard() {
   } else return c;
 }
 
+void read_file(fs::FS &fs, const char * path){
+   xprintf("\r\nLoading session... ");
+   File file = fs.open(path);
+   if(!file || file.isDirectory()){
+       xprintf("\r\nFailed to open file for reading\r\n");
+       return;
+   }
+   
+   // load RAM and RAM expansion
+   for (int i = 0; i < 0x1700; i++) RAM[i] = file.read();
+   for (int i = 0x2000; i < 0x9548; i++) RAM_EXP[i - 0x2000] = file.read();
+   
+   xprintf("Done\r\n");
+}
+
+void write_file(fs::FS &fs, const char * path){
+   xprintf("\r\nSaving session... ");
+   File file = fs.open(path, "wb");
+   if(!file){
+      xprintf("\r\nFailed to open file for writing\r\n");
+      return;
+   }
+   
+   // save RAM and RAM expansion
+   for (int i = 0; i < 0x1700; i++) file.write(RAM[i]);
+   for (int i = 0x2000; i < 0x9548; i++) file.write(RAM_EXP[i - 0x2000]);
+
+   xprintf("Done\r\n");
+}
+
 void setup()
 {
     // init serial port
@@ -2493,6 +2546,12 @@ void setup()
     DisplayController.setResolution(VGA_640x480_60Hz);
     Terminal.begin(&DisplayController);
     Terminal.enableCursor(true);
+    
+    // init SPIFFS
+    if(!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)){
+        xprintf("SPIFFS Mount Failed");
+        return;
+    }
     
     // pre-load tiny bassic to RAM
     for (int i = 0x2000; i <= 0x28FF; i++) RAM_EXP[i - 0x2000] = TINY_BASIC[i - 0x2000]; 
