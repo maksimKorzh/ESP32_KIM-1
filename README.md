@@ -1,9 +1,6 @@
 # ESP32 KIM-1
 ESP32 + FabGL based KIM-1 serial mode emulator
-
-# VIDEOKIM
-Arduino based KIM-1 emulator running in TTY mode, outputting serial port content to TFT display.
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/6GqOHyGS9Vk/0.jpg)](https://www.youtube.com/watch?v=6GqOHyGS9Vk)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/HUjK1wHHkJg/0.jpg)](https://youtu.be/HUjK1wHHkJg)
 
 # Memory layout
     0x0000 - 0x16FF    5888 bytes RAM
