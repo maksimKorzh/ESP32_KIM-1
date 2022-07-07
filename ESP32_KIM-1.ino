@@ -2473,7 +2473,7 @@ char read_keyboard() {
                   case 5: xprintf("%s", help); break;                              // F1 Help commands
                   case 6: write_file(SPIFFS, "/session.txt"); break;               // F2 write file
                   case 4: read_file(SPIFFS, "/session.txt"); break;                // F3 read file
-                  case 12: ESP.restart(); // F4 rebbot
+                  case 12: ESP.restart();                                          // F4 reboot
                   case 10: xprintf("\e[2J\e[H"); break;                            // F8 clear screen
                   case 1: xprintf("\n\r\e[37m WHITE COLOR ENABLED\n\r"); break;    // F9
                   case 9: xprintf("\n\r\e[92m GREEN COLOR ENABLED\n\r"); break;    // F10
@@ -2519,7 +2519,7 @@ void read_file(fs::FS &fs, const char * path){
    xprintf("Done\r\n");
 }
 
-void write_file(fs::FS &fs, const char * path){
+void write_file(fs::FS &fs, const char * path) {
    xprintf("\r\nSaving session... ");
    File file = fs.open(path, "wb");
    if(!file){
