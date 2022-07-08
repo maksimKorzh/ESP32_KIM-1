@@ -45,9 +45,9 @@ const char *help = "\r\n\n\
     Commands:                        Memory map:\r\n\n\
 \
     F1  - print this help            $0000 - $17FF  RAM\r\n\
-    F2  - save session via SPIFFS    $2900 - $9547  RAM\r\n\
+    F2  - save session via SPIFFS    $2000 - $FFF9  RAM\r\n\
     F3  - load session via SPIFFS    $2000 - $28FF  RAM Tiny BASIC\r\n\
-    F4  - reboot                     $9548 - $A032  ROM Supermon+64 V1.2\r\n\
+    F4  - reboot                     $9548 - $A031  RAM Supermon+64 V1.2\r\n\
     F8  - clear screen\r\n\
     F9  - text color WHITE           OUTSP   $1E9E  Output space to TTY\r\n\
     F10 - text color GREEN           OUTCH   $1EA0  Output A to TTY as char\r\n\
@@ -1318,7 +1318,7 @@ const uint8_t TINY_BASIC[] = {
     0xaf, 0x23, 0xaf, 0x23, 0xb8, 0x24, 0x5f, 0x27, 0x5d, 0x27, 0x17, 0x25,
     0xba, 0x20, 0x47, 0x23, 0xcd, 0x20, 0x2b, 0x27, 0xc1, 0x26, 0x20, 0x41,
     0x54, 0x20, 0x80, 0x80, 0x27, 0xa9, 0x00, 0x85, 0x20, 0x85, 0x22, 0xa9,
-    0x02, 0x85, 0x21, 0x85, 0x23, 0xa0, 0x01, 0xb1, 0x22, 0xaa, 0x49, 0xff,
+    0x03, 0x85, 0x21, 0x85, 0x23, 0xa0, 0x01, 0xb1, 0x22, 0xaa, 0x49, 0xff,
     0x91, 0x22, 0xd1, 0x22, 0x08, 0x8a, 0x91, 0x22, 0xe6, 0x22, 0xd0, 0x02,
     0xe6, 0x23, 0xa5, 0x23, 0xc9, 0x20, 0xd0, 0x06, 0xa5, 0x22, 0xc9, 0x00,
     0xf0, 0x03, 0x28, 0xf0, 0xde, 0x88, 0xd8, 0xa5, 0x20, 0x6d, 0x17, 0x20,
@@ -1512,8 +1512,8 @@ uint8_t RAM[0x1700];    // 5888 bytes
 // ======== RIOT chips memory 0x1700-0x17FF====================================
 uint8_t RIOT[0x100];    // 256 bytes
 
-// ======== RAM EXPANSION  0x0000-0x1700 ================================================
-uint8_t RAM_EXP[0x7548];    // 30024 bytes
+// ======== RAM EXPANSION  0x2000-0xFFFA ================================================
+uint8_t RAM_EXP[0xDFFA];    // 57338 bytes
 
 /**********************************************\
  ==============================================
@@ -2346,11 +2346,8 @@ uint8_t read6502(uint16_t address) {
     // IRQ addresses
     if (address >= 0xFFFA && address <= 0xFFFF) return IRQ[address - 0xFFFA];
 
-    // SUPERMON ROM
-    if (address >= 0x9548 && address <= 0xA032) return SUPERMON[address - 0x9548];
-
     // RAM Expansion
-    if (address >= 0x2000 && address <= 0x9547) return RAM_EXP[address - 0x2000];
+    if (address >= 0x2000 && address <= 0xFFF9) return RAM_EXP[address - 0x2000];
     
     // KIM-1 ROM (HEX monitor)
     if (address >= 0x1800 && address <= 0x1FFF) {  // thanks to Oscar Vermeulen for the below intercepts
@@ -2422,7 +2419,7 @@ uint8_t read6502(uint16_t address) {
 
 void write6502(uint16_t address, uint8_t value) {    
     // RAM expansion
-    if (address >= 0x2000 && address <= 0x9547) {
+    if (address >= 0x2000 && address <= 0xFFF9) {
       RAM_EXP[address - 0x2000] = value;
       return;
     }
@@ -2557,6 +2554,9 @@ void setup()
     
     // pre-load tiny bassic to RAM
     for (int i = 0x2000; i <= 0x28FF; i++) RAM_EXP[i - 0x2000] = TINY_BASIC[i - 0x2000]; 
+    
+    // pre-load supermon to RAM
+    for (int i = 0x9548; i < 0xA032; i++) RAM_EXP[i - 0x2000] = SUPERMON[i - 0x9548];
     
     // reset CPU
     reset6502();
