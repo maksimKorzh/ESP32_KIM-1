@@ -48,7 +48,7 @@ const char *help = "\r\n\n\
     F2  - save session via SPIFFS    $2000 - $FFF9  RAM\r\n\
     F3  - load session via SPIFFS    $2000 - $28FF  RAM Tiny BASIC\r\n\
     F4  - reboot                     $9548 - $A031  RAM Supermon+64 V1.2\r\n\
-    F8  - clear screen\r\n\
+    F8  - clear screen               $A032 - $A06B  RAM Assemble from source\r\n\
     F9  - text color WHITE           OUTSP   $1E9E  Output space to TTY\r\n\
     F10 - text color GREEN           OUTCH   $1EA0  Output A to TTY as char\r\n\
     F11 - text color YELLOW          GETCH   $1E5A  Get char from TTY to A\r\n\
@@ -1107,7 +1107,6 @@ const uint8_t ROM[] = {
 /* 1FF7 */ 0xFF, 0xFF, 0xFF    //          .FILL 3, $FF
 };
 
-
 /*
 
     SUPERMON+64 by Jim Butterfield,
@@ -1296,6 +1295,15 @@ const uint8_t SUPERMON[] = {
     0x1e, 0xe8, 0x8a, 0xc5, 0xc6, 0xf0, 0x03, 0x4c, 0x14, 0xa0, 0xa2, 0x00,
     0x8e, 0x31, 0x02, 0xa6, 0xc6, 0x4c, 0x82, 0x95
 };
+
+// program to feed Tiny BASIC editor's lines to Supermon's assembler (0xA032 - 0xA06B)
+const uint8_t FEED_ASM[] = {
+    0xA9, 0x61, 0x8D, 0x30, 0xA0, 0xA9, 0xA0, 0x8D, 0x31, 0xA0, 0xEA, 0xEA, 0xA0, 0x00, 0xA2, 0x06,
+    0xBD, 0x00, 0x03, 0x99, 0x00, 0x02, 0xE8, 0xC8, 0xC9, 0x0D, 0xD0, 0xF4, 0xA9, 0x00, 0x88, 0x99,
+    0x00, 0x02, 0xA0, 0x07, 0xE8, 0xE8, 0x8C, 0x3C, 0xA0, 0x8E, 0x3D, 0xA0, 0x4C, 0x96, 0x95, 0xAC,
+    0x3C, 0xA0, 0xAE, 0x3D, 0xA0, 0xBD, 0x00, 0x03, 0xD0, 0xD6
+};
+
 /*
     TINY BASIC by Tom Pitman (adopted and recompiled by CMK)
 
@@ -2557,6 +2565,9 @@ void setup()
     
     // pre-load supermon to RAM
     for (int i = 0x9548; i < 0xA032; i++) RAM_EXP[i - 0x2000] = SUPERMON[i - 0x9548];
+    
+    // pre-load assemble from source code
+    for (int i = 0xA032; i < 0xA06C; i++) RAM_EXP[i - 0x2000] = FEED_ASM[i - 0xA032];
     
     // reset CPU
     reset6502();
